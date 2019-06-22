@@ -4,6 +4,7 @@ var isMouseDown = false;
 var lastLoc = {x: 0, y: 0};
 var lastTimestamp = 0;
 var lastLineWidth = -1;
+var strokeStyle = 'black';
 
 var canvas = document.getElementById('canvas');
 var context = canvas.getContext('2d');
@@ -12,6 +13,50 @@ canvas.width = canvasWidth;
 canvas.height = canvasHeight;
 
 drawGrid();
+
+var clear = document.getElementById('clear_btn');
+clear.addEventListener('click', function(e) {
+    context.clearRect(0, 0, canvasWidth, canvasHeight);
+    drawGrid();
+})
+
+var btns = document.getElementsByClassName('color_btn');
+for(var i = 0; i<btns.length; i++){
+    btns[i].onclick = function(ind){
+        return function(){
+            addClass(this, "color_btn_selected");
+            strokeStyle = window.getComputedStyle(this).backgroundColor;
+            var sib = siblings(this);
+            for(var j = 0; j<sib.length; j++){
+                removeClass(sib[j], "color_btn_selected");
+            }
+        }
+    }(i)
+}
+function addClass(obj, name){       //添加样式函数
+    obj.className = obj.className + " " + name;
+}
+function siblings(obj){    //获取到除当前按钮以外其他按钮
+    var sibArr = obj.parentNode.children;
+    var sibNewArr = [];
+    for(var i = 0;i<sibArr.length;i++){
+        if(sibArr[i] != obj){
+            sibNewArr.push(sibArr[i]);
+        }
+    }
+    return sibNewArr;     
+}
+function removeClass(obj, name){   //删除样式函数
+    var classStr = obj.className;
+    var classArr = classStr.split(" ");
+    var classNewArr = [];
+    for(var i = 0;i<classArr.length;i++){
+        if(classArr[i] != name){
+            classNewArr.push(classArr[i]);
+        }
+    }
+    obj.className = classNewArr.join(" ");
+}
 
 canvas.onmousedown = function(e) {
     e.preventDefault();
@@ -42,6 +87,7 @@ canvas.onmousemove = function(e) {
         context.moveTo(lastLoc.x, lastLoc.y);
         context.lineTo(curLoc.x, curLoc.y);
 
+        context.strokeStyle = strokeStyle;
         context.lineWidth = lineWidth;
         context.lineCap = 'round';
         context.lineJoin = 'round';
@@ -58,15 +104,19 @@ function calcDistance(loc1, loc2) {
     return Math.sqrt((loc1.x - loc2.x)*(loc1.x - loc2.x) + (loc1.y - loc2.y)*(loc1.y - loc2.y));
 }
 
+var maxLineWidth = 30;
+var minLineWidth = 1;
+var maxStrokeV = 10;
+var minStrokeV = 0.1;
 function calcLineWidth(t, s) {
     var v = s / t;
     var result;
-    if (v < 0.1) {
-        result = 30;
-    } else if(v >= 10) {
-        result = 1;
+    if (v < minStrokeV) {
+        result = maxLineWidth;
+    } else if(v >= maxStrokeV) {
+        result = minLineWidth;
     } else {
-        result = 30 - (v-0.1)/(10-0.1)*(30-1);
+        result = maxLineWidth - (v-minStrokeV)/(maxStrokeV-minStrokeV)*(maxLineWidth-minLineWidth);
     }
 
     if (lastLineWidth === -1) {
