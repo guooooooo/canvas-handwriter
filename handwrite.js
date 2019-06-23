@@ -1,4 +1,4 @@
-var canvasWidth = 800;
+var canvasWidth = Math.min(800, window.innerWidth-20);
 var canvasHeight = canvasWidth;
 var isMouseDown = false;
 var lastLoc = {x: 0, y: 0};
@@ -11,6 +11,8 @@ var context = canvas.getContext('2d');
 
 canvas.width = canvasWidth;
 canvas.height = canvasHeight;
+
+document.getElementById('controller').style.width = canvasWidth + 'px';
 
 drawGrid();
 
@@ -58,47 +60,74 @@ function removeClass(obj, name){   //删除样式函数
     obj.className = classNewArr.join(" ");
 }
 
+function beginStroke(point) {
+    isMouseDown = true;
+    lastLoc = windowToCanvas(point.x, point.y);
+    lastTimestamp = new Date().getTime();
+}
+function endStroke() {
+    isMouseDown = false;
+}
+function moveStroke(point) {
+    var curLoc = windowToCanvas(point.x, point.y);
+    var curTimestamp = new Date().getTime();
+    var s = calcDistance(curLoc, lastLoc);
+    var t = curTimestamp - lastTimestamp;
+
+    var lineWidth = calcLineWidth(t, s);
+    // draw
+    context.beginPath();
+
+    context.moveTo(lastLoc.x, lastLoc.y);
+    context.lineTo(curLoc.x, curLoc.y);
+
+    context.strokeStyle = strokeStyle;
+    context.lineWidth = lineWidth;
+    context.lineCap = 'round';
+    context.lineJoin = 'round';
+
+    context.stroke();
+
+    lastLoc = curLoc;
+    lastTimestamp = curTimestamp;
+    lastLineWidth = lineWidth;
+}
+
 canvas.onmousedown = function(e) {
     e.preventDefault();
-    isMouseDown = true;
-    lastLoc = windowToCanvas(e.clientX, e.clientY);
-    lastTimestamp = new Date().getTime();
+    beginStroke({x: e.clientX, y: e.clientY});
 }
 canvas.onmouseup = function(e) {
     e.preventDefault();
-    isMouseDown = false;
+    endStroke();
 }
 canvas.onmouseout = function(e) {
     e.preventDefault();
-    isMouseDown = false;
+    endStroke();
 }
 canvas.onmousemove = function(e) {
     e.preventDefault();
     if (isMouseDown) {
-        var curLoc = windowToCanvas(e.clientX, e.clientY);
-        var curTimestamp = new Date().getTime();
-        var s = calcDistance(curLoc, lastLoc);
-        var t = curTimestamp - lastTimestamp;
-
-        var lineWidth = calcLineWidth(t, s);
-        // draw
-        context.beginPath();
-
-        context.moveTo(lastLoc.x, lastLoc.y);
-        context.lineTo(curLoc.x, curLoc.y);
-
-        context.strokeStyle = strokeStyle;
-        context.lineWidth = lineWidth;
-        context.lineCap = 'round';
-        context.lineJoin = 'round';
-
-        context.stroke();
-
-        lastLoc = curLoc;
-        lastTimestamp = curTimestamp;
-        lastLineWidth = lineWidth;
+        moveStroke({x: e.clientX, y: e.clientY});
     }
 }
+
+canvas.addEventListener('touchstart', function(e){
+    e.preventDefault();
+    touch = e.touches[0];
+    beginStroke({x: touch.pageX, y: touch.pageY});
+})
+canvas.addEventListener('touchmove', function(e){
+    e.preventDefault();
+    if(isMouseDown){
+        touch = e.touches[0];
+        moveStroke({x: touch.pageX, y: touch.pageY});
+    }
+})
+canvas.addEventListener('touchend', function(e){
+    e.preventDefault();
+    endStroke();
+})
 
 function calcDistance(loc1, loc2) {
     return Math.sqrt((loc1.x - loc2.x)*(loc1.x - loc2.x) + (loc1.y - loc2.y)*(loc1.y - loc2.y));
